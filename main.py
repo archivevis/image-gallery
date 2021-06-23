@@ -3,18 +3,17 @@ import pixcat
 import glob
 import sys
 import os
+import time
 from contextlib import contextmanager
 
 @contextmanager
 def cd(new_dir):
     prev_dir = os.getcwd()
     os.chdir(new_dir)
-    print("going to", os.getcwd())
     try:
         yield
     finally:
         os.chdir(prev_dir)
-        print("back to", os.getcwd())
 
 
 def list_images(directory):
@@ -26,7 +25,13 @@ def list_images(directory):
 
     return files
 
-class Gallery:
+def get_directory(argument):
+    if argument.endswith(".py"):
+        return os.getcwd()
+    else:
+        return argument
+
+class Viewer:
     def __init__(self):
         # Curses stuff
         self.stdscr = curses.initscr()
@@ -35,5 +40,27 @@ class Gallery:
         curses.curs_set(0)
 
         # Photo stuff
-        self.directory = sys.argv[-1]
+        self.directory = get_directory(sys.argv[-1])
         self.dir_files = list_images(self.directory)
+
+        # Screen size
+        self.height, self.width = self.stdscr.getmaxyx()
+    
+    def loop(self):
+        try:
+            # TODO: figure out why image moves left every other erase/refresh cycle
+            while True:
+                self.stdscr.erase()
+                pixcat.Image("~/Pictures/okayu2.jpg").fit_screen().show()
+                self.stdscr.refresh()
+                time.sleep(5)
+        except KeyboardInterrupt:
+            error = False
+        finally:
+            curses.nocbreak()
+            curses.endwin()
+            print("See ya soon!")
+
+
+viewer = Viewer()
+viewer.loop()
