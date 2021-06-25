@@ -1,10 +1,15 @@
+#!/bin/python
 import curses
 import pixcat
 import glob
 import sys
 import os
 import time
+import random
 from contextlib import contextmanager
+
+MAX_RECENT_FILES = 3
+IMAGE_TIME = 5
 
 @contextmanager
 def cd(new_dir):
@@ -26,10 +31,10 @@ def list_images(directory):
     return files
 
 def get_directory(argument):
-    if argument.endswith(".py"):
-        return os.getcwd()
-    else:
+    if os.path.isdir(argument):
         return argument
+    else:
+        return os.getcwd()
 
 class Viewer:
     def __init__(self):
@@ -42,18 +47,36 @@ class Viewer:
         # Photo stuff
         self.directory = get_directory(sys.argv[-1])
         self.dir_files = list_images(self.directory)
+        self.recent_files = []
 
-        # Screen size
+        # Screen size, might be needed later
         self.height, self.width = self.stdscr.getmaxyx()
+    
+    def get_picture(self):
+        while True:
+            image = self.dir_files[random.randint(0, len(self.dir_files) - 1)]
+
+            if image not in self.recent_files:
+                break 
+
+        self.recent_files.append(image)
+
+        if (len(self.recent_files) > MAX_RECENT_FILES):
+            self.recent_files.pop(0)
+        
+        return (self.directory + "/" + image)
+
+    def draw_screen(self):
+        pixcat.Image(self.get_picture()).fit_screen().show()
     
     def loop(self):
         try:
-            # TODO: figure out why image moves left every other erase/refresh cycle
+            # TODO: find a way to use erase instead of clear
             while True:
-                self.stdscr.erase()
-                pixcat.Image("~/Pictures/okayu2.jpg").fit_screen().show()
+                self.stdscr.clear()
                 self.stdscr.refresh()
-                time.sleep(5)
+                self.draw_screen()
+                time.sleep(IMAGE_TIME)
         except KeyboardInterrupt:
             error = False
         finally:
